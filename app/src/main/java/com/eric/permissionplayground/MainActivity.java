@@ -10,6 +10,8 @@ import android.widget.ExpandableListView;
 import android.widget.Toast;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MainActivity extends Activity {
     private static final int Permission_RequestCode = 2;
@@ -25,7 +27,7 @@ public class MainActivity extends Activity {
 
         permissionGroupAdapter = new PermissionGroupAdapter(this);
 
-        InitData();
+        initPermissions();
 
         ExpandableListView listView = (ExpandableListView)findViewById(R.id.permissionListView);
         listView.setAdapter(permissionGroupAdapter);
@@ -42,6 +44,9 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+
+        //testRequest();
+
     }
 
     private void refreshPermissionStatus(PermissionGroup group) {
@@ -65,7 +70,22 @@ public class MainActivity extends Activity {
         this.addPermissionInGroup(permissionGroup, permission, 1);
     }
 
-    private void InitData() {
+    private void testRequest() {
+
+        permissionManager.requestPermissions(new String[] {
+
+                Manifest.permission.READ_CALENDAR,
+
+                Manifest.permission.READ_CONTACTS,
+                Manifest.permission.WRITE_CALENDAR,
+                Manifest.permission.CAMERA,
+                Manifest.permission.WRITE_CONTACTS
+
+
+        }, Permission_RequestCode);
+    }
+
+    private void initPermissions() {
         PermissionGroup permissionGroup = null;
 
         //CALENDAR
@@ -233,16 +253,31 @@ public class MainActivity extends Activity {
                                            String permissions[],
                                            int[] grantResults) {
         if(requestCode == Permission_RequestCode) {
-            PermissionItem permissionItem = permissionsMap.get(permissions[0]);
-            if(grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                refreshPermissionStatus(permissionItem.getPermissionGroup());
-                permissionGroupAdapter.notifyDataSetChanged();
-            }
-            else {
-                if(!permissionManager.shouldShowRequestPermissionRationale(permissionItem.getName())) {
-                    String askPromting = String.format(this.getResources().getString(R.string.permission_ask), permissionItem.getShortName());
-                    Toast.makeText(getApplicationContext(), askPromting, Toast.LENGTH_SHORT).show();
+            Set<PermissionGroup> deniedPermissionGroups = new HashSet<PermissionGroup>();
+            for(int i = 0; i < permissions.length; ++i) {
+                PermissionItem permissionItem = permissionsMap.get(permissions[i]);
+                if(permissionItem == null)
+                    continue;
+
+                if(grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                    refreshPermissionStatus(permissionItem.getPermissionGroup());
+                    permissionGroupAdapter.notifyDataSetChanged();
                 }
+                else {
+                    if(!permissionManager.shouldShowRequestPermissionRationale(permissionItem.getName())) {
+                        deniedPermissionGroups.add(permissionItem.getPermissionGroup());
+                    }
+                }
+            }
+
+            if(!deniedPermissionGroups.isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                for(PermissionGroup group : deniedPermissionGroups) {
+                    sb.append(',').append(group.getShortName());
+                }
+                String strGroups = sb.toString().substring(1);
+                String askPromting = String.format(this.getResources().getString(R.string.permission_ask), strGroups);
+                Toast.makeText(getApplicationContext(), askPromting, Toast.LENGTH_SHORT).show();
             }
 
             processing = false;
