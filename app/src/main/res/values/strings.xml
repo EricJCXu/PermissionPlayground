@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">PermissionPlayground</string>
+    <string name="permission_status_granted">Granted</string>
+    <string name="permission_status_denied">Denied</string>
+    <string name="permission_ask">Please grant the permission [%1$s] in Settings.</string>
+    <string name="permission_group_others">Normal permissions</string>
+</resources>
