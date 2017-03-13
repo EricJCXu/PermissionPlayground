@@ -9,30 +9,39 @@ import android.view.View;
 import android.widget.ExpandableListView;
 import android.widget.Toast;
 
+import org.androidannotations.annotations.AfterViews;
+import org.androidannotations.annotations.Background;
+import org.androidannotations.annotations.EActivity;
+import org.androidannotations.annotations.UiThread;
+import org.androidannotations.annotations.ViewById;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+@EActivity(R.layout.activity_main)
 public class MainActivity extends Activity {
     private static final int Permission_RequestCode = 2;
     private PermissionGroupAdapter permissionGroupAdapter;
     private PermissionManager permissionManager;
     private HashMap<String, PermissionItem> permissionsMap = new HashMap<String, PermissionItem>();
     private boolean processing = false;
+
+    @ViewById(R.id.permissionListView)
+    ExpandableListView permissionListView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
         permissionManager = new PermissionManager(this);
 
         permissionGroupAdapter = new PermissionGroupAdapter(this);
 
-        initPermissions();
-
-        ExpandableListView listView = (ExpandableListView)findViewById(R.id.permissionListView);
-        listView.setAdapter(permissionGroupAdapter);
-
-        listView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
+    }
+    @AfterViews
+    public void initUI() {
+        permissionListView.setAdapter(permissionGroupAdapter);
+        permissionListView.setOnChildClickListener(new ExpandableListView.OnChildClickListener() {
             @Override
             public boolean onChildClick(ExpandableListView parent, View v, int groupPosition, int childPosition, long id) {
                 if(processing) return true;
@@ -45,8 +54,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        //testRequest();
-
+        initPermissions();
     }
 
     private void refreshPermissionStatus(PermissionGroup group) {
@@ -85,7 +93,8 @@ public class MainActivity extends Activity {
         }, Permission_RequestCode);
     }
 
-    private void initPermissions() {
+    @Background
+    public void initPermissions() {
         PermissionGroup permissionGroup = null;
 
         //CALENDAR
@@ -246,6 +255,12 @@ public class MainActivity extends Activity {
         permissionGroupAdapter.addPermissionGroup(permissionGroup);
         refreshPermissionStatus(permissionGroup);
 
+        refreshPermissionListView();
+    }
+
+    @UiThread
+    public void refreshPermissionListView() {
+        permissionGroupAdapter.notifyDataSetChanged();
     }
 
     @Override
@@ -261,7 +276,6 @@ public class MainActivity extends Activity {
 
                 if(grantResults[i] == PackageManager.PERMISSION_GRANTED) {
                     refreshPermissionStatus(permissionItem.getPermissionGroup());
-                    permissionGroupAdapter.notifyDataSetChanged();
                 }
                 else {
                     if(!permissionManager.shouldShowRequestPermissionRationale(permissionItem.getName())) {
@@ -270,6 +284,7 @@ public class MainActivity extends Activity {
                 }
             }
 
+            refreshPermissionListView();
             if(!deniedPermissionGroups.isEmpty()) {
                 StringBuilder sb = new StringBuilder();
                 for(PermissionGroup group : deniedPermissionGroups) {
